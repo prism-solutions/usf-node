@@ -1,6 +1,6 @@
 {
   "name": "usf-node",
-  "version": "0.01",
+  "version": "1.0.0",
   "description": "USF Node plugin",
   "main": "./dist/cjs/src/index.js",
   "module": "./dist/esm/src/index.mjs",
@@ -13,9 +13,7 @@
       "default": "./dist/esm/src/index.js"
     }
   },
-  "files": [
-    "dist/"
-  ],
+  "files": ["dist/"],
   "scripts": {
     "dev": "tsc --build && node ./examples/index.js && tsc --build --clean",
     "compile": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json",
@@ -40,6 +38,7 @@
   "author": "Mateo Laporte",
   "devDependencies": {
     "@eslint/js": "^9.2.0",
+    "@types/eslint__js": "^8.42.3",
     "@types/jest": "^29.5.12",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20.11.0",

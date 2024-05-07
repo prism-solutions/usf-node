@@ -11,22 +11,31 @@ import {
   type DeleteRequestBody,
   type CreateBatchRequestBody,
   type AllRequestBodies,
+  type ApiResponse,
+  type ErrorResponse,
+  type UpdateResponse,
+  type DeleteResponse,
 } from "./types/custom";
 
-class UsfNode {
+class usfNode {
   private readonly authorizerId: string;
   private readonly secret: string;
   private readonly privateKey: any;
-
-  constructor({
-    authorizerId,
-    secret,
-    privateKey,
-  }: {
-    authorizerId: string;
-    secret: string;
-    privateKey: any;
-  }) {
+  private readonly baseUrl: string = "https://api.usf.com/v1";
+  private readonly silentReturn: boolean;
+  constructor(
+    {
+      authorizerId,
+      secret,
+      privateKey,
+    }: {
+      authorizerId: string;
+      secret: string;
+      privateKey: any;
+    },
+    silentReturn: boolean = true,
+    url: string = "https://api.usf.com/v1",
+  ) {
     if (!privateKey) {
       throw new Error("privateKey is required");
     }
@@ -36,9 +45,13 @@ class UsfNode {
     if (!authorizerId) {
       throw new Error("authorizerId is required");
     }
+
     this.authorizerId = authorizerId;
     this.secret = secret;
     this.privateKey = privateKey;
+    this.baseUrl = url;
+
+    this.silentReturn = silentReturn;
   }
 
   private generateSignature(body: object): string {
@@ -61,19 +74,45 @@ class UsfNode {
 
   private async request<T extends AllRequestBodies>(
     body: T,
-  ): Promise<ItemReturnable | ItemReturnable[]> {
-    const signature = this.generateSignature(body);
-    const response = await fetch("https://api.usfnode.com", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: signature,
-      },
-      body: JSON.stringify(body),
-    });
+  ): Promise<ApiResponse> {
+    const arrayBody = [body.operation, body.query];
+    if (body.document) {
+      arrayBody.push(body.document);
+    }
+    arrayBody.push(body.selectOptions || {});
+
+    const signature = this.generateSignature(arrayBody);
+
+    let response;
+    try {
+      response = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          sig: signature,
+        },
+        body: JSON.stringify(arrayBody),
+      });
+    } catch (networkError) {
+      console.error("Network error:", networkError); // Consider more sophisticated logging in production
+      throw new Error(
+        "Network error occurred while attempting to reach the server.",
+      );
+    }
 
     if (!response.ok) {
-      throw new Error("Failed to make a request");
+      let errorMessage = "Failed to fetch"; // Default error message
+      try {
+        const errorBody = await response.text(); // Assuming the error message is plain text
+        const errorJson = JSON.parse(errorBody);
+        errorMessage = errorJson.message || errorBody; // Customize based on your API's error response structure
+      } catch (parseError) {
+        console.error("Error parsing server response:", parseError);
+      }
+      if (this.silentReturn) {
+        return { error: errorMessage };
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -83,34 +122,47 @@ class UsfNode {
   public find(
     query: Record<string, any>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<ItemReturnable[] | ErrorResponse> {
     return this.request<FindRequestBody>({
       operation: "find",
       query,
       selectOptions,
-    }) as Promise<ItemReturnable[]>;
+    }) as Promise<ItemReturnable[] | ErrorResponse>;
   }
-
+  public async findOne(
+    query: Record<string, any>,
+    selectOptions: Options = {},
+  ): Promise<ItemReturnable | ErrorResponse> {
+    const items = (await this.request<FindRequestBody>({
+      operation: "find",
+      query,
+      selectOptions,
+    })) as ItemReturnable[] | ErrorResponse;
+    if (Array.isArray(items)) {
+      return items[0];
+    }
+    return items;
+  }
   public create(
     createBody: ItemCreatable,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable> {
+  ): Promise<ItemReturnable | ErrorResponse> {
     return this.request<CreateRequestBody>({
       operation: "create",
       document: createBody,
       selectOptions,
-    }) as Promise<ItemReturnable>;
+    }) as Promise<ItemReturnable | ErrorResponse>;
   }
 
   public createBatch(
     createBodies: ItemCreatable[],
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<ItemReturnable[] | ErrorResponse> {
     return this.request<CreateBatchRequestBody>({
       operation: "createBatch",
       document: createBodies,
       selectOptions,
-    }) as Promise<ItemReturnable[]>;
+    }) as Promise<ItemReturnable[] | ErrorResponse>;
   }
 
   private updateInternal(
@@ -118,88 +170,86 @@ class UsfNode {
     updateBody: Partial<BaseEditableItem>,
     selectOptions: Options = {},
     operation: "updateOne" | "update" | "updateMany", // Internal parameter to specify the operation
-  ): Promise<ItemReturnable | ItemReturnable[]> {
+  ): Promise<ApiResponse> {
     return this.request<UpdateRequestBody>({
       operation,
       query,
       document: updateBody,
       selectOptions,
-    });
+    }) as Promise<ApiResponse>;
   }
   public updateOne(
     query: Record<string, any>,
     updateBody: Partial<BaseEditableItem>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable> {
+  ): Promise<ItemReturnable | ErrorResponse> {
     return this.updateInternal(
       query,
       updateBody,
       selectOptions,
       "updateOne",
-    ) as Promise<ItemReturnable>;
+    ) as Promise<ItemReturnable | ErrorResponse>;
   }
   public update(
     query: Record<string, any>,
     updateBody: Partial<BaseEditableItem>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<UpdateResponse | ErrorResponse> {
     return this.updateInternal(
       query,
       updateBody,
       selectOptions,
       "update",
-    ) as Promise<ItemReturnable[]>;
+    ) as Promise<UpdateResponse | ErrorResponse>;
   }
   public updateMany(
     query: Record<string, any>,
     updateBody: Partial<BaseEditableItem>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<UpdateResponse | ErrorResponse> {
     return this.updateInternal(
       query,
       updateBody,
       selectOptions,
       "update",
-    ) as Promise<ItemReturnable[]>;
+    ) as Promise<UpdateResponse | ErrorResponse>;
   }
 
   private deleteInternal(
     query: Record<string, any>,
     selectOptions: Options = {},
     operation: "deleteOne" | "delete" | "deleteMany", // Internal parameter to specify the operation
-  ): Promise<ItemReturnable | ItemReturnable[]> {
+  ): Promise<DeleteResponse | ErrorResponse> {
     return this.request<DeleteRequestBody>({
       operation,
       query,
       selectOptions,
-    }) as Promise<ItemReturnable>;
+    }) as Promise<DeleteResponse | ErrorResponse>;
   }
   public deleteOne(
     query: Record<string, any>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable> {
-    return this.deleteInternal(
-      query,
-      selectOptions,
-      "deleteOne",
-    ) as Promise<ItemReturnable>;
+  ): Promise<ItemReturnable | ErrorResponse> {
+    return this.deleteInternal(query, selectOptions, "deleteOne") as Promise<
+      ItemReturnable | ErrorResponse
+    >;
   }
   public delete(
     query: Record<string, any>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<DeleteResponse | ErrorResponse> {
     return this.deleteInternal(query, selectOptions, "delete") as Promise<
-      ItemReturnable[]
+      DeleteResponse | ErrorResponse
     >;
   }
   public deleteMany(
     query: Record<string, any>,
     selectOptions: Options = {},
-  ): Promise<ItemReturnable[]> {
+  ): Promise<DeleteResponse | ErrorResponse> {
     return this.deleteInternal(query, selectOptions, "deleteMany") as Promise<
-      ItemReturnable[]
+      DeleteResponse | ErrorResponse
     >;
   }
 }
 
-module.exports = UsfNode;
+export default usfNode;

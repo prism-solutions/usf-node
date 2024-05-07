@@ -103,7 +103,22 @@ type DeleteRequestBody = RequestBodyBase<null> & {
 type CreateBatchRequestBody = RequestBodyBase<ItemCreatable[]> & {
   operation: "createBatch";
 };
+export type ErrorResponse = { error: string };
 
+export type DeleteResponse = { acknowledged: boolean; deletedCount: number };
+export type UpdateResponse = {
+  acknowledged: boolean;
+  modifiedCount: number;
+  upsertedId: number | null;
+  upsertedCount: number;
+  matchedCount: number;
+};
+export type ApiResponse =
+  | ItemReturnable
+  | ItemReturnable[]
+  | ErrorResponse
+  | UpdateResponse
+  | DeleteResponse;
 // Union Type for All Request Bodies
 type AllRequestBodies =
   | CreateRequestBody
