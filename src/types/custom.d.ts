@@ -50,9 +50,40 @@ export interface BaseEditableItem {
   };
 }
 
-export interface ItemCreatable extends BaseEditableItem {
+export interface ItemCreatable {
+  hardcode?: string;
+  entities: {
+    factoryId: string;
+    brandId: string;
+  };
+  currentLocation?: {
+    id?: string;
+    name?: string;
+    details?: Record<string, any>;
+  };
+  transitTo?: {
+    id: string;
+    client: string;
+  };
+  availability?: Map<string, StatusDetails>;
+  brandDetails: {
+    productId?: string;
+    productReference: string;
+    productName?: string;
+    productType?: string;
+  };
+  packageQuantity: number;
+  color: {
+    id?: string;
+    name: string;
+  };
+  factoryDetails: {
+    productId: string;
+    productReference?: string;
+    productName?: string;
+    productType: string;
+  };
   metadata: {
-    types?: string[];
     synthetizedType?: string;
   };
 }
