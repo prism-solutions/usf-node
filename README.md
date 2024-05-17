@@ -205,5 +205,3 @@ usf
   .then((updatedItem) => console.log(updatedItem))
   .catch((error) => console.error(error));
 ```
-
-This section aims to provide clarity on how to use `selectOptions` to better customize your queries and updates, making the interaction with the database more flexible and efficient.
