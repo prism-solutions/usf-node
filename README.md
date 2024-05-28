@@ -10,7 +10,7 @@ npm install usf-node
 
 ## Usage
 
-Initilize the USF object with your `authorizedId`, `secret`, `privateKey` and `silentErrors` options.
+Initilize the USF object with your `authorizerId`, `secret`, `privateKey` and `silentErrors` options.
 
 You can create a new authorizer via the USF interface.
 
@@ -18,7 +18,7 @@ You can create a new authorizer via the USF interface.
 const USF = require("usf-node");
 
 const usf = new USF({
-  authorizedId: "your_authorizedId",
+  authorizerId: "your_authorizerId",
   secret: "your_secret",
   privateKey: "your_privateKey",
   silentErrors: true | false,
@@ -218,5 +218,3 @@ usf
   .then((updatedItem) => console.log(updatedItem))
   .catch((error) => console.error(error));
 ```
-
-This section aims to provide clarity on how to use `selectOptions` to better customize your queries and updates, making the interaction with the database more flexible and efficient.
