@@ -134,7 +134,7 @@ type DeleteRequestBody = RequestBodyBase<null> & {
 type CreateBatchRequestBody = RequestBodyBase<ItemCreatable[]> & {
   operation: "createBatch";
 };
-export type ErrorResponse = { error: string };
+export type ErrorResponse = { error: { message: string; code: string } };
 
 export type DeleteResponse = { acknowledged: boolean; deletedCount: number };
 export type UpdateResponse = {

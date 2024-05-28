@@ -140,6 +140,19 @@ usf.findOne({ "entities.factoryId": "not-exist" }).then((response) => {
 });
 ```
 
+Errors will always be returned in the following format:
+
+```json
+{
+  "error": {
+    "message": "Error message",
+    "code": "Error code"
+  }
+}
+```
+
+If you have not passed `silentErrors: true`, the method will throw an error with the error message if one occurs.
+
 ## Select Options
 
 The `selectOptions` parameter allow you to customize the return behavior of the create, find and update methods. Here are the available options:

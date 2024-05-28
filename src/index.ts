@@ -101,18 +101,29 @@ class usfNode {
     }
 
     if (!response.ok) {
-      let errorMessage = "Failed to fetch"; // Default error message
+      let errorMessage = {
+        error: {
+          message: "Failed to fetch",
+          code: "NETWORK_ERROR",
+        },
+      }; // Default error message
       try {
-        const errorBody = await response.text(); // Assuming the error message is plain text
-        const errorJson = JSON.parse(errorBody);
-        errorMessage = errorJson.message || errorBody; // Customize based on your API's error response structure
+        const errorJson = await response.json(); // Assuming the error message is plain text
+        errorMessage = errorJson?.error || errorJson; // Customize based on your API's error response structure
       } catch (parseError) {
         console.error("Error parsing server response:", parseError);
+        // Fallback to plain text error message
+        errorMessage = {
+          error: {
+            message: await response.text(),
+            code: "PARSE_ERROR",
+          },
+        };
       }
       if (this.silentReturn) {
-        return { error: errorMessage };
+        return errorMessage;
       }
-      throw new Error(errorMessage);
+      throw new Error(errorMessage.error.message);
     }
 
     const data = await response.json();
