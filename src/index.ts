@@ -17,10 +17,10 @@ import {
   type DeleteResponse,
 } from "./types/custom";
 
-class usfNode {
+class UsfNode {
   private readonly authorizerId: string;
   private readonly secret: string;
-  private readonly privateKey: any;
+  private readonly privateKey: string;
   private readonly baseUrl: string = "https://api.usf.com/v1";
   private readonly silentReturn: boolean;
   constructor(
@@ -31,7 +31,7 @@ class usfNode {
     }: {
       authorizerId: string;
       secret: string;
-      privateKey: any;
+      privateKey: string;
     },
     silentReturn: boolean = true,
     url: string = "https://api.usf.com/v1",
@@ -263,4 +263,4 @@ class usfNode {
   }
 }
 
-export default usfNode;
+export default UsfNode;
