@@ -10,6 +10,7 @@ import {
   type UpdateRequestBody,
   type DeleteRequestBody,
   type CreateBatchRequestBody,
+  type UpdateBatchRequestBody,
   type AllRequestBodies,
   type ApiResponse,
   type ErrorResponse,
@@ -172,6 +173,19 @@ class UsfNode {
     return this.request<CreateBatchRequestBody>({
       operation: "createBatch",
       document: createBodies,
+      selectOptions,
+    }) as Promise<ItemReturnable[] | ErrorResponse>;
+  }
+
+  public updateBatch(
+    query: Record<string, any>,
+    updateBody: Partial<BaseEditableItem>[],
+    selectOptions: Options = {},
+  ): Promise<ItemReturnable[] | ErrorResponse> {
+    return this.request<UpdateBatchRequestBody>({
+      operation: "updateBatch",
+      query,
+      document: updateBody,
       selectOptions,
     }) as Promise<ItemReturnable[] | ErrorResponse>;
   }

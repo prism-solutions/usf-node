@@ -134,6 +134,9 @@ type DeleteRequestBody = RequestBodyBase<null> & {
 type CreateBatchRequestBody = RequestBodyBase<ItemCreatable[]> & {
   operation: "createBatch";
 };
+type UpdateBatchRequestBody = RequestBodyBase<Partial<BaseEditableItem>[]> & {
+  operation: "updateBatch";
+};
 export type ErrorResponse = { error: { message: string; code: string } };
 
 export type DeleteResponse = { acknowledged: boolean; deletedCount: number };
@@ -156,4 +159,5 @@ type AllRequestBodies =
   | FindRequestBody
   | UpdateRequestBody
   | DeleteRequestBody
-  | CreateBatchRequestBody;
+  | CreateBatchRequestBody
+  | UpdateBatchRequestBody;
