@@ -111,6 +111,19 @@ export interface ItemReturnable extends Omit<BaseEditableItem, "entities"> {
   };
 }
 
+export interface BatchUpdateResponse {
+  insertedCount: number;
+  matchedCount: number;
+  modifiedCount: number;
+  deletedCount: number;
+  upsertedCount: number;
+  upsertedIds: Record<string, any>;
+  insertedIds: Record<string, any>;
+}
+export interface BatchUpdateBody {
+  filter: Record<string, any>;
+  update: Record<string, any>;
+}
 type AnyRecord = Record<string, any>;
 
 interface RequestBodyBase<T> {
@@ -132,10 +145,13 @@ type DeleteRequestBody = RequestBodyBase<null> & {
   operation: "delete" | "deleteOne" | "deleteMany";
 };
 type CreateBatchRequestBody = RequestBodyBase<ItemCreatable[]> & {
-  operation: "createBatch";
+  operation: "batchCreate";
 };
-type UpdateBatchRequestBody = RequestBodyBase<Partial<BaseEditableItem>[]> & {
-  operation: "updateBatch";
+export type UpdateBatchRequestBody = RequestBodyBase<BatchUpdateBody[]> & {
+  operation: "batchUpdate";
+};
+type AggregateRequestBody = RequestBodyBase<Record<string, any>[]> & {
+  operation: "aggregate";
 };
 export type ErrorResponse = { error: { message: string; code: string } };
 
@@ -152,7 +168,8 @@ export type ApiResponse =
   | ItemReturnable[]
   | ErrorResponse
   | UpdateResponse
-  | DeleteResponse;
+  | DeleteResponse
+  | BatchUpdateResponse;
 // Union Type for All Request Bodies
 type AllRequestBodies =
   | CreateRequestBody
@@ -160,4 +177,65 @@ type AllRequestBodies =
   | UpdateRequestBody
   | DeleteRequestBody
   | CreateBatchRequestBody
-  | UpdateBatchRequestBody;
+  | UpdateBatchRequestBody
+  | AggregateRequestBody;
+
+// Export inventory item type
+interface UsfItem {
+  _id: string;
+  entities: {
+    apiId: string;
+    entityId: string;
+    factoryId: string;
+    brandId: string;
+  };
+  currentLocation: {
+    id: string;
+    name: string;
+    details?: Record<string, any>;
+  };
+  transitTo?: {
+    id: string;
+    client: string;
+  };
+  availability: {
+    reserved?: {
+      orderId: string;
+      date?: string;
+      temporary?: boolean;
+      expiration?: string;
+    };
+  };
+  brandDetails: {
+    productId: string;
+    productReference: string;
+    productName?: string;
+    productType: string;
+  };
+  packageQuantity: number;
+  color: {
+    id: string;
+    name: string;
+  };
+  factoryDetails: {
+    productId: string;
+    productReference?: string;
+    productName?: string;
+    productType: string;
+  };
+  deleted: {
+    status: boolean;
+    deletionDate?: string;
+  };
+  locationHistory: Array<{
+    id: string;
+    name: string;
+    date: string;
+  }>;
+  metadata: {
+    types: string[];
+    synthetizedType?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}

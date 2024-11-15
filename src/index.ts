@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 import {
   type BaseEditableItem,
+  type BatchUpdateBody,
   type ItemCreatable,
   type ItemReturnable,
   type Options,
@@ -15,7 +16,10 @@ import {
   type ApiResponse,
   type ErrorResponse,
   type UpdateResponse,
+  type BatchUpdateResponse,
   type DeleteResponse,
+  type AggregateRequestBody,
+  type UsfItem,
 } from "./types/custom";
 
 class UsfNode {
@@ -77,13 +81,14 @@ class UsfNode {
     body: T,
   ): Promise<ApiResponse> {
     const arrayBody = [body.operation, body.query];
-    if (body.document) {
+    if (body.document && body.operation !== "aggregate") {
       arrayBody.push(body.document);
     }
-    arrayBody.push(body.selectOptions || {});
+    if (body.operation !== "aggregate" && body.operation !== "batchUpdate") {
+      arrayBody.push(body.selectOptions || {});
+    }
 
     const signature = this.generateSignature(arrayBody);
-
     let response;
     try {
       response = await fetch(this.baseUrl, {
@@ -171,25 +176,29 @@ class UsfNode {
     selectOptions: Options = {},
   ): Promise<ItemReturnable[] | ErrorResponse> {
     return this.request<CreateBatchRequestBody>({
-      operation: "createBatch",
+      operation: "batchCreate",
       document: createBodies,
       selectOptions,
     }) as Promise<ItemReturnable[] | ErrorResponse>;
   }
 
   public updateBatch(
-    query: Record<string, any>,
-    updateBody: Partial<BaseEditableItem>[],
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable[] | ErrorResponse> {
+    query: BatchUpdateBody[],
+  ): Promise<BatchUpdateResponse | ErrorResponse> {
     return this.request<UpdateBatchRequestBody>({
-      operation: "updateBatch",
+      operation: "batchUpdate",
       query,
-      document: updateBody,
-      selectOptions,
-    }) as Promise<ItemReturnable[] | ErrorResponse>;
+    }) as Promise<BatchUpdateResponse | ErrorResponse>;
   }
 
+  public aggregate(
+    query: Record<string, any>[],
+  ): Promise<ItemReturnable[] | ErrorResponse> {
+    return this.request<AggregateRequestBody>({
+      operation: "aggregate",
+      query,
+    }) as Promise<ItemReturnable[] | ErrorResponse>;
+  }
   private updateInternal(
     query: Record<string, any>,
     updateBody: Partial<BaseEditableItem>,
@@ -276,5 +285,5 @@ class UsfNode {
     >;
   }
 }
-
+export type { UsfItem };
 export default UsfNode;
