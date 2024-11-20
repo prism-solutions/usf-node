@@ -75,8 +75,9 @@ interface DeletionInfo {
 
 /** Metadata for item classification */
 interface ItemMetadata {
-  types: string[]; // 1-4 type identifiers
+  types?: string[]; // 1-4 type identifiers
   synthetizedType?: string;
+  productType?;
 }
 
 /**
@@ -164,7 +165,9 @@ export interface CreateUSFItem extends Omit<USFItem, "_id"> {
   color: Required<Color>;
   brandDetails: Required<Pick<ProductDetails, "productReference">>;
   factoryDetails: Required<Pick<ProductDetails, "productId" | "productType">>;
-  metadata: Required<ItemMetadata>;
+  metadata: {
+    productType: string;
+  };
 }
 
 /**

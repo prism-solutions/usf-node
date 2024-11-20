@@ -20,7 +20,7 @@ class UsfNode {
   private readonly authorizerId: string;
   private readonly secret: string;
   private readonly privateKey: string;
-  private readonly baseUrl: string = "https://api.usf.com/v1";
+  private readonly baseUrl: string = "https://api.usf.prism-solutions.io/v1";
   private readonly silentReturn: boolean;
   constructor(
     {
@@ -33,7 +33,7 @@ class UsfNode {
       privateKey: string;
     },
     silentReturn: boolean = true,
-    url: string = "https://api.usf.com/v1",
+    url: string = "https://api.usf.prism-solutions.io/v1",
   ) {
     if (!privateKey) {
       throw new Error("privateKey is required");
