@@ -35,7 +35,7 @@ const query = {
 const options = {
   sort: { packageQuantity: -1 },
   limit: 10,
-  projection: { hardcode: 1 }
+  select: { hardcode: 1 }
 };
 
 const items = await usf.find(query, options);
@@ -56,7 +56,7 @@ const complexQuery = {
 const item = await usf.findOne({
   hardcode: "ABC123"
 }, {
-  projection: {
+  select: {
     hardcode: 1,
     "entities.factoryId": 1
   }
@@ -225,7 +225,7 @@ interface FindOptions {
   sort?: { [key: string]: 1 | -1 };
   limit?: number;
   skip?: number;
-  projection?: { [key: string]: 0 | 1 };
+  select?: { [key: string]: 0 | 1 };
 }
 ```
 

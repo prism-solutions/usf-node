@@ -132,7 +132,7 @@ export interface FindOptions {
   sort?: { [key in keyof USFItem]?: 1 | -1 };
   limit?: number;
   skip?: number;
-  projection?: { [key in keyof USFItem]?: 0 | 1 };
+  select?: { [key in keyof USFItem]?: 0 | 1 };
 }
 
 /**
