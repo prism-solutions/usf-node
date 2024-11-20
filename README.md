@@ -1,6 +1,6 @@
 # USF-NODE
 
-This node module allows you to interact with USF APIs.
+This node module allows you to interact with USF APIs, providing a type-safe interface for inventory management operations.
 
 ## Installation
 
@@ -10,211 +10,253 @@ npm install usf-node
 
 ## Usage
 
-Initilize the USF object with your `authorizerId`, `secret`, `privateKey` and `silentErrors` options.
+Initialize the USF object with your credentials and options:
 
-You can create a new authorizer via the USF interface.
-
-```javascript
-const USF = require("usf-node");
+```typescript
+import USF from "usf-node";
 
 const usf = new USF({
   authorizerId: "your_authorizerId",
   secret: "your_secret",
   privateKey: "your_privateKey",
-  silentErrors: true | false,
-});
+}, true); // silentReturn = true
 ```
 
 ## Basic Operations
 
-Here's how you can use the primary methods provided by the module to interact with USF APIs.
-
 ### Finding Items
 
-To find items based on a query:
+```typescript
+// Basic find
+const query = {
+  "entities.factoryId": "123",
+  "packageQuantity": { $gt: 10 }
+};
+const options = {
+  sort: { packageQuantity: -1 },
+  limit: 10,
+  projection: { hardcode: 1 }
+};
 
-```javascript
-const query = { entities: { factoryId: "123", brandId: "456" } };
-const selectOptions = { select: { name: true } };
+const items = await usf.find(query, options);
 
-usf
-  .find(query, selectOptions)
-  .then((items) => console.log(items))
-  .catch((error) => console.error(error));
+// Find with complex query
+const complexQuery = {
+  $or: [
+    { "brandDetails.productType": "TYPE1" },
+    { "factoryDetails.productType": "TYPE2" }
+  ],
+  "availability.reserved": { $exists: false }
+};
 ```
 
 ### Finding a Single Item
 
-To find a single item:
-
-```javascript
-usf
-  .findOne({ "entities.factoryId": "123" }, { select: { name: 1 } })
-  .then((item) => console.log(item))
-  .catch((error) => console.error(error));
-```
-
-### Creating an Item
-
-To create a new item:
-
-For reference to the required fields, please refer to the USF API documentation.
-
-```javascript
-const item = {
-  entities: {
-    factoryId: "789",
-    brandId: "101",
-  },
-  metadata: {
-    types: ["type1", "type2"],
-    synthetizedType: "combinedType",
-  },
-};
-
-usf
-  .create(item)
-  .then((response) => console.log(response))
-  .catch((error) => console.error(error));
-```
-
-### Updating Items
-
-To update items based on a query:
-
-For reference to the updatable fields, please refer to the USF API documentation.
-
-```javascript
-const query = { "entities.factoryId": "123" };
-const updates = { $set: { "currentLocation.name": "New Location" } };
-const selectOptions = {}; // Optional, use if you need to specify options
-
-usf
-  .update(query, updates, selectOptions)
-  .then((response) => console.log(response))
-  .catch((error) => console.error(error));
-```
-
-### Deleting Items
-
-To delete items based on a query:
-
-```javascript
-const query = { "entities.factoryId": "123" };
-
-usf
-  .delete(query)
-  .then((response) => console.log(response))
-  .catch((error) => console.error(error));
-```
-
-## Advanced Operations
-
-### Batch Creating Items
-
-For batch operations like creating multiple items at once:
-
-```javascript
-const items = [
-  { entities: { factoryId: "111", brandId: "222" } },
-  { entities: { factoryId: "333", brandId: "444" } },
-];
-
-usf
-  .createBatch(items)
-  .then((response) => console.log(response))
-  .catch((error) => console.error(error));
-```
-
-### Handling Errors
-
-If you have passed `silentErrors: true` during initialization, method calls will return errors as part of the response rather than throwing. This allows for checking the error property in the response:
-
-```javascript
-usf.findOne({ "entities.factoryId": "not-exist" }).then((response) => {
-  if (response.error) {
-    console.error("Error occurred:", response.error);
-  } else {
-    console.log("Item found:", response);
+```typescript
+const item = await usf.findOne({
+  hardcode: "ABC123"
+}, {
+  projection: {
+    hardcode: 1,
+    "entities.factoryId": 1
   }
 });
 ```
 
-Errors will always be returned in the following format:
+### Creating Items
 
-```json
-{
-  "error": {
-    "message": "Error message",
-    "code": "Error code"
+```typescript
+// Single item creation
+const newItem = {
+  entities: {
+    factoryId: "factory123",
+    brandId: "brand456"
+  },
+  brandDetails: {
+    productReference: "REF123",
+    productType: "TYPE1"
+  },
+  factoryDetails: {
+    productId: "PROD789",
+    productType: "TYPE1"
+  },
+  packageQuantity: 100,
+  color: {
+    name: "Blue"
+  },
+  metadata: {
+    types: ["type1", "type2"]
+  }
+};
+
+const created = await usf.create(newItem);
+
+// Batch creation
+const batchCreate = {
+  items: [newItem, {...}],
+  options: {
+    ordered: true, // stops on first error
+    bypassValidation: false
+  }
+};
+
+const batchResult = await usf.createBatch(batchCreate);
+```
+
+### Updating Items
+
+```typescript
+// Single update
+const updateQuery = { "hardcode": "ABC123" };
+const updateOp = {
+  $set: {
+    "currentLocation.name": "New Location",
+    packageQuantity: 50
+  },
+  $push: {
+    "metadata.types": "newType"
+  }
+};
+
+const updated = await usf.updateOne(updateQuery, updateOp);
+
+// Batch update
+const batchUpdates = [
+  {
+    filter: { "packageQuantity": { $lt: 10 } },
+    update: { $set: { "availability.status": "LOW_STOCK" } },
+    options: { multi: true }
+  },
+  {
+    filter: { "hardcode": "DEF456" },
+    update: { $inc: { packageQuantity: 5 } }
+  }
+];
+
+const batchResult = await usf.updateBatch(batchUpdates);
+```
+
+### Deleting Items
+
+```typescript
+// Delete single item
+const deleteOne = await usf.deleteOne({ hardcode: "ABC123" });
+
+// Delete multiple items
+const deleteMany = await usf.deleteMany({
+  "currentLocation.id": "LOC123",
+  "deleted.status": true
+});
+```
+
+### Aggregation Pipeline
+
+```typescript
+const pipeline = [
+  {
+    $match: {
+      "entities.factoryId": "factory123"
+    }
+  },
+  {
+    $group: {
+      _id: "$brandDetails.productType",
+      totalQuantity: { $sum: "$packageQuantity" }
+    }
+  },
+  {
+    $sort: { totalQuantity: -1 }
+  }
+];
+
+const aggregateResult = await usf.aggregate(pipeline);
+```
+
+## Response Types
+
+### Success Responses
+
+#### Find Operations
+```typescript
+interface USFItemResponse {
+  id: string;
+  hardcode?: string;
+  entities: {
+    apiId: string;
+    entityId: string;
+    factoryId: string;
+    brandId: string;
+  };
+  // ... other fields
+}
+```
+
+#### Batch Operations
+```typescript
+interface BatchOperationResult {
+  success: boolean;
+  matchedCount?: number;
+  modifiedCount?: number;
+  upsertedCount?: number;
+  insertedCount?: number;
+  errors?: Array<{
+    index: number;
+    error: string;
+    document?: CreateUSFItem | UpdateQuery;
+  }>;
+}
+```
+
+### Error Response
+```typescript
+interface ErrorResponse {
+  error: {
+    message: string;
+    code: string;
   }
 }
 ```
 
-If you have not passed `silentErrors: true`, the method will throw an error with the error message if one occurs.
+## Options
 
-## Select Options
-
-The `selectOptions` parameter allow you to customize the return behavior of the create, find and update methods. Here are the available options:
-
-### `sort`
-
-Allows you to sort the returned items based on one or more fields. You can specify ascending (1) or descending (-1) order for each field.
-
-Example:
-
-```javascript
-{ sort: { "currentLocation.name": 1 } }
-```
-
-### `select`
-
-Determines which fields should be included (`true`, `1`) or excluded (`false`, `0`) in the returned items. By default, all fields are included.
-
-Example:
-
-```javascript
-{ select: { name: true, "entities.factoryId": 1, "metadata.types": 0 } }
-```
-
-### `returnNew`
-
-When performing `updateOne` operations, this option, if set to `true`, returns the modified document rather than the original. Default is `true`.
-
-Example:
-
-```javascript
-{
-  returnNew: true;
+### FindOptions
+```typescript
+interface FindOptions {
+  sort?: { [key: string]: 1 | -1 };
+  limit?: number;
+  skip?: number;
+  projection?: { [key: string]: 0 | 1 };
 }
 ```
 
-### Examples
-
-#### Finding items with selectOptions:
-
-```javascript
-const query = {};
-const selectOptions = {
-  sort: { "currentLocation.name": -1 },
-  select: { name: 1, "entities.factoryId": 1 },
-};
-
-usf
-  .find(query, selectOptions)
-  .then((items) => console.log(items))
-  .catch((error) => console.error(error));
+### BatchOptions
+```typescript
+interface BatchOptions {
+  ordered?: boolean;     // Stop on first error
+  bypassValidation?: boolean;
+  multi?: boolean;       // For updates
+  upsert?: boolean;      // For updates
+}
 ```
 
-#### Updating an item and return the new document:
+## Error Handling
 
-```javascript
-const query = { "entities.factoryId": "123" };
-const updates = { $set: { "currentLocation.name": "Updated Location" } };
-const selectOptions = { returnNew: true };
+With `silentReturn: true`:
+```typescript
+const result = await usf.find({ invalid: true });
+if ('error' in result) {
+  console.error('Error:', result.error);
+} else {
+  console.log('Items:', result);
+}
+```
 
-usf
-  .update(query, updates, selectOptions)
-  .then((updatedItem) => console.log(updatedItem))
-  .catch((error) => console.error(error));
+With `silentReturn: false`:
+```typescript
+try {
+  const items = await usf.find({ invalid: true });
+  console.log('Items:', items);
+} catch (error) {
+  console.error('Error:', error.message);
+}
 ```

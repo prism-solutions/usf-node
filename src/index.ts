@@ -1,26 +1,20 @@
 import crypto from "crypto";
 
-import {
-  type BaseEditableItem,
-  type BatchUpdateBody,
-  type ItemCreatable,
-  type ItemReturnable,
-  type Options,
-  type CreateRequestBody,
-  type FindRequestBody,
-  type UpdateRequestBody,
-  type DeleteRequestBody,
-  type CreateBatchRequestBody,
-  type UpdateBatchRequestBody,
-  type AllRequestBodies,
-  type ApiResponse,
-  type ErrorResponse,
-  type UpdateResponse,
-  type BatchUpdateResponse,
-  type DeleteResponse,
-  type AggregateRequestBody,
-  type UsfItem,
-} from "./types/custom";
+import type {
+  FindQuery,
+  UpdateQuery,
+  FindOptions,
+  AggregateStages,
+  BatchCreateQuery,
+  BatchUpdateQuery,
+  BatchOperationResult,
+} from "./types/operations";
+import type {
+  USFItem,
+  USFItemResponse,
+  CreateUSFItem,
+  UpdateUSFItem,
+} from "./types/item";
 
 class UsfNode {
   private readonly authorizerId: string;
@@ -85,7 +79,7 @@ class UsfNode {
       arrayBody.push(body.document);
     }
     if (body.operation !== "aggregate" && body.operation !== "batchUpdate") {
-      arrayBody.push(body.selectOptions || {});
+      arrayBody.push((body.selectOptions as Record<string, unknown>) || {});
     }
 
     const signature = this.generateSignature(arrayBody);
@@ -137,153 +131,162 @@ class UsfNode {
   }
 
   public find(
-    query: Record<string, any>,
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable[] | ErrorResponse> {
+    query: FindQuery,
+    options: FindOptions = {},
+  ): Promise<USFItemResponse[] | ErrorResponse> {
     return this.request<FindRequestBody>({
       operation: "find",
       query,
-      selectOptions,
-    }) as Promise<ItemReturnable[] | ErrorResponse>;
+      selectOptions: options,
+    }) as Promise<USFItemResponse[] | ErrorResponse>;
   }
+
   public async findOne(
-    query: Record<string, any>,
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable | ErrorResponse> {
+    query: FindQuery,
+    options: FindOptions = {},
+  ): Promise<USFItemResponse | ErrorResponse> {
     const items = (await this.request<FindRequestBody>({
       operation: "find",
       query,
-      selectOptions,
-    })) as ItemReturnable[] | ErrorResponse;
+      selectOptions: { ...options, limit: 1 },
+    })) as USFItemResponse[] | ErrorResponse;
+
     if (Array.isArray(items)) {
       return items[0];
     }
     return items;
   }
+
   public create(
-    createBody: ItemCreatable,
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable | ErrorResponse> {
+    document: CreateUSFItem,
+    options: FindOptions = {},
+  ): Promise<USFItemResponse | ErrorResponse> {
     return this.request<CreateRequestBody>({
       operation: "create",
-      document: createBody,
-      selectOptions,
-    }) as Promise<ItemReturnable | ErrorResponse>;
+      document,
+      selectOptions: options,
+    }) as Promise<USFItemResponse | ErrorResponse>;
   }
 
-  public createBatch(
-    createBodies: ItemCreatable[],
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable[] | ErrorResponse> {
+  public createBatch({
+    items,
+  }: BatchCreateQuery): Promise<BatchOperationResult | ErrorResponse> {
     return this.request<CreateBatchRequestBody>({
       operation: "batchCreate",
-      document: createBodies,
-      selectOptions,
-    }) as Promise<ItemReturnable[] | ErrorResponse>;
+      document: items,
+    }) as Promise<BatchOperationResult | ErrorResponse>;
   }
 
   public updateBatch(
-    query: BatchUpdateBody[],
-  ): Promise<BatchUpdateResponse | ErrorResponse> {
+    queries: BatchUpdateQuery[],
+  ): Promise<BatchOperationResult | ErrorResponse> {
     return this.request<UpdateBatchRequestBody>({
       operation: "batchUpdate",
-      query,
-    }) as Promise<BatchUpdateResponse | ErrorResponse>;
+      query: queries,
+    }) as Promise<BatchOperationResult | ErrorResponse>;
   }
 
   public aggregate(
-    query: Record<string, any>[],
-  ): Promise<ItemReturnable[] | ErrorResponse> {
+    pipeline: AggregateStages[],
+  ): Promise<USFItemResponse[] | ErrorResponse> {
     return this.request<AggregateRequestBody>({
       operation: "aggregate",
-      query,
-    }) as Promise<ItemReturnable[] | ErrorResponse>;
+      query: pipeline,
+    }) as Promise<USFItemResponse[] | ErrorResponse>;
   }
+
   private updateInternal(
-    query: Record<string, any>,
-    updateBody: Partial<BaseEditableItem>,
-    selectOptions: Options = {},
-    operation: "updateOne" | "update" | "updateMany", // Internal parameter to specify the operation
+    query: FindQuery,
+    update: UpdateQuery,
+    options: FindOptions = {},
+    operation: "updateOne" | "update" | "updateMany",
   ): Promise<ApiResponse> {
     return this.request<UpdateRequestBody>({
       operation,
       query,
-      document: updateBody,
-      selectOptions,
-    }) as Promise<ApiResponse>;
+      document: update,
+      selectOptions: options,
+    });
   }
+
   public updateOne(
-    query: Record<string, any>,
-    updateBody: Partial<BaseEditableItem>,
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable | ErrorResponse> {
-    return this.updateInternal(
-      query,
-      updateBody,
-      selectOptions,
-      "updateOne",
-    ) as Promise<ItemReturnable | ErrorResponse>;
+    query: FindQuery,
+    update: UpdateQuery,
+    options: FindOptions = {},
+  ): Promise<USFItemResponse | ErrorResponse> {
+    return this.updateInternal(query, update, options, "updateOne") as Promise<
+      USFItemResponse | ErrorResponse
+    >;
   }
+
   public update(
-    query: Record<string, any>,
-    updateBody: Partial<BaseEditableItem>,
-    selectOptions: Options = {},
+    query: FindQuery,
+    update: UpdateQuery,
+    options: FindOptions = {},
   ): Promise<UpdateResponse | ErrorResponse> {
-    return this.updateInternal(
-      query,
-      updateBody,
-      selectOptions,
-      "update",
-    ) as Promise<UpdateResponse | ErrorResponse>;
+    return this.updateInternal(query, update, options, "update") as Promise<
+      UpdateResponse | ErrorResponse
+    >;
   }
+
   public updateMany(
-    query: Record<string, any>,
-    updateBody: Partial<BaseEditableItem>,
-    selectOptions: Options = {},
+    query: FindQuery,
+    update: UpdateQuery,
+    options: FindOptions = {},
   ): Promise<UpdateResponse | ErrorResponse> {
-    return this.updateInternal(
-      query,
-      updateBody,
-      selectOptions,
-      "update",
-    ) as Promise<UpdateResponse | ErrorResponse>;
+    return this.updateInternal(query, update, options, "updateMany") as Promise<
+      UpdateResponse | ErrorResponse
+    >;
   }
 
   private deleteInternal(
-    query: Record<string, any>,
-    selectOptions: Options = {},
-    operation: "deleteOne" | "delete" | "deleteMany", // Internal parameter to specify the operation
+    query: FindQuery,
+    options: FindOptions = {},
+    operation: "deleteOne" | "delete" | "deleteMany",
   ): Promise<DeleteResponse | ErrorResponse> {
     return this.request<DeleteRequestBody>({
       operation,
       query,
-      selectOptions,
+      selectOptions: options,
     }) as Promise<DeleteResponse | ErrorResponse>;
   }
   public deleteOne(
-    query: Record<string, any>,
-    selectOptions: Options = {},
-  ): Promise<ItemReturnable | ErrorResponse> {
-    return this.deleteInternal(query, selectOptions, "deleteOne") as Promise<
-      ItemReturnable | ErrorResponse
+    query: FindQuery,
+    options: FindOptions = {},
+  ): Promise<USFItemResponse | ErrorResponse> {
+    return this.deleteInternal(query, options, "deleteOne") as Promise<
+      USFItemResponse | ErrorResponse
     >;
   }
+
   public delete(
-    query: Record<string, any>,
-    selectOptions: Options = {},
+    query: FindQuery,
+    options: FindOptions = {},
   ): Promise<DeleteResponse | ErrorResponse> {
-    return this.deleteInternal(query, selectOptions, "delete") as Promise<
+    return this.deleteInternal(query, options, "delete") as Promise<
       DeleteResponse | ErrorResponse
     >;
   }
+
   public deleteMany(
-    query: Record<string, any>,
-    selectOptions: Options = {},
+    query: FindQuery,
+    options: FindOptions = {},
   ): Promise<DeleteResponse | ErrorResponse> {
-    return this.deleteInternal(query, selectOptions, "deleteMany") as Promise<
+    return this.deleteInternal(query, options, "deleteMany") as Promise<
       DeleteResponse | ErrorResponse
     >;
   }
 }
-export type { UsfItem };
+export type {
+  USFItem,
+  USFItemResponse,
+  CreateUSFItem,
+  UpdateUSFItem,
+  FindQuery,
+  UpdateQuery,
+  BatchCreateQuery,
+  BatchUpdateQuery,
+  BatchOperationResult,
+  FindOptions,
+};
 export default UsfNode;
