@@ -125,9 +125,12 @@ class UsfNode {
       }
       throw new Error(errorMessage.error.message);
     }
-
-    const data = await response.json();
-    return data;
+    try {
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      throw new Error("Failed to parse response");
+    }
   }
 
   public find(
