@@ -73,7 +73,6 @@ const newItem = {
     brandId: "brand456"
   },
   brandDetails: {
-    productReference: "REF123",
     productType: "TYPE1"
   },
   factoryDetails: {

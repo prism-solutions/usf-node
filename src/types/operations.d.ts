@@ -168,11 +168,6 @@ export interface BatchCreateQuery {
 export interface BatchUpdateQuery {
   filter: FindQuery;
   update: UpdateQuery;
-  options?: {
-    multi?: boolean; // If true, updates all matched documents. If false, updates only the first one
-    upsert?: boolean; // If true, creates document if none is found
-    bypassValidation?: boolean;
-  };
 }
 
 /**

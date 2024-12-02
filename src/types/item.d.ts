@@ -42,7 +42,6 @@ interface EntityInfo {
 /** Product details structure shared between brand and factory */
 interface ProductDetails {
   productId?: string;
-  productReference?: string;
   productName?: string;
   productType?: string;
 }
@@ -88,7 +87,7 @@ export interface USFItem {
   _id?: MongoId; // MongoDB document ID
   id?: string;
   hardcode?: string; // Optional hardcoded identifier
-
+  sku?: string;
   // Core entity information - Required on creation, immutable after
   entities: EntityInfo;
 
@@ -107,14 +106,12 @@ export interface USFItem {
   // Product information
   brandDetails: {
     productId?: string;
-    productReference: string; // Required
     productName?: string;
     productType?: string;
   } & ProductDetails;
 
   factoryDetails: {
     productId: string; // Required
-    productReference?: string;
     productName?: string;
     productType: string; // Required
   } & ProductDetails;
@@ -163,11 +160,7 @@ export interface USFItemResponse
 export interface CreateUSFItem extends Omit<USFItem, "_id"> {
   entities: Required<EntityInfo>;
   color: Required<Color>;
-  brandDetails: Required<Pick<ProductDetails, "productReference">>;
-  factoryDetails: Required<Pick<ProductDetails, "productId" | "productType">>;
-  metadata: {
-    productType: string;
-  };
+  productType: string;
 }
 
 /**
