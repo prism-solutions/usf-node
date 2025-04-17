@@ -1,6 +1,6 @@
 {
   "name": "@prism-solutions/usf-node",
-  "version": "1.2.9",
+  "version": "1.3.0",
   "description": "USF Node plugin",
   "main": "./dist/cjs/src/index.js",
   "module": "./dist/esm/src/index.mjs",

@@ -8,6 +8,10 @@ import type {
   BatchCreateQuery,
   BatchUpdateQuery,
   BatchOperationResult,
+  BulkWriteUpdateOneOperation,
+  BulkWriteOperation,
+  AggregateStage,
+  AggregatePipeline,
 } from "./types/operations";
 import type {
   USFItem,
@@ -78,7 +82,7 @@ class UsfNode {
     if (body.document && body.operation !== "aggregate") {
       arrayBody.push(body.document);
     }
-    if (body.operation !== "aggregate" && body.operation !== "batchUpdate") {
+    if (body.operation !== "aggregate" && body.operation !== "batchUpdate" && body.operation !== "bulkWrite") {
       arrayBody.push((body.selectOptions as Record<string, unknown>) || {});
     }
 
@@ -189,12 +193,51 @@ class UsfNode {
     }) as Promise<BatchOperationResult | ErrorResponse>;
   }
 
+  /**
+   * Perform bulk operations using MongoDB's bulkWrite pattern
+   * @param operations Single operation or array of operations
+   * @param options Options for the bulk operation
+   * @returns Result of the bulk operation
+   */
+  public bulkWrite(
+    operations: BulkWriteOperation,
+    options: { ordered?: boolean } = {}
+  ): Promise<BatchOperationResult | ErrorResponse> {
+    // Normalize to array for consistent handling
+    const ops = Array.isArray(operations) ? operations : [operations];
+
+    return this.request<BulkWriteRequestBody>({
+      operation: "bulkWrite",
+      query: ops,
+      selectOptions: options
+    }) as Promise<BatchOperationResult | ErrorResponse>;
+  }
+
+  /**
+   * Perform aggregation operations
+   * @param pipeline Array of aggregation stages
+   * @returns Aggregation results
+   */
   public aggregate(
-    pipeline: AggregateStages[],
+    pipeline: AggregateStages[] | AggregateStage[] | AggregatePipeline,
   ): Promise<USFItemResponse[] | ErrorResponse> {
+    // Handle different input formats
+    let normalizedPipeline: AggregateStages[];
+
+    if ('pipeline' in pipeline) {
+      // It's an AggregatePipeline
+      normalizedPipeline = pipeline.pipeline.map(stage => stage.stage);
+    } else if (Array.isArray(pipeline) && pipeline.length > 0 && 'stage' in pipeline[0]) {
+      // It's an array of AggregateStage
+      normalizedPipeline = (pipeline as AggregateStage[]).map(stage => stage.stage);
+    } else {
+      // It's already an array of AggregateStages
+      normalizedPipeline = pipeline as AggregateStages[];
+    }
+
     return this.request<AggregateRequestBody>({
       operation: "aggregate",
-      query: pipeline,
+      query: normalizedPipeline,
     }) as Promise<USFItemResponse[] | ErrorResponse>;
   }
 
@@ -290,6 +333,11 @@ export type {
   BatchCreateQuery,
   BatchUpdateQuery,
   BatchOperationResult,
+  BulkWriteUpdateOneOperation,
+  BulkWriteOperation,
   FindOptions,
+  AggregateStages,
+  AggregateStage,
+  AggregatePipeline,
 };
 export default UsfNode;

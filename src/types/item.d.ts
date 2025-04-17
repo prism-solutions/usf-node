@@ -5,78 +5,89 @@ export type ObjectIdString = string & { __isObjectId: true }; // Branded type fo
 /** Helper type to handle both ObjectId and its string representation */
 export type MongoId = ObjectIdString | Types.ObjectId;
 
-/** Status details common structure for availability tracking */
+/**
+ * Status details for availability tracking
+ * Note: The API validates these fields at runtime, but TypeScript cannot enforce all validations
+ */
 export interface StatusDetails {
-  orderId?: string;
-  date: Date;
-}
-
-/** Extended status details for reservations */
-export interface ReservedStatus extends StatusDetails {
+  orderId?: string | null;
+  date?: Date | string;
   temporary?: boolean;
   expiration?: Date;
 }
 
-/** Mapping of different availability statuses */
+/**
+ * Availability status mapping
+ * The API expects predefined keys but also accepts custom ones
+ * Runtime validation enforces specific required fields for create operations
+ */
 export interface AvailabilityMap {
   produced?: StatusDetails;
-  reserved?: ReservedStatus;
+  reserved?: StatusDetails;
   sold?: StatusDetails;
+  [key: string]: StatusDetails | undefined;
 }
 
 /** Location reference structure */
-interface LocationReference {
+export interface LocationReference {
   id: MongoId;
   name: string;
   date: Date;
 }
 
 /** Entity identifiers and ownership */
-interface EntityInfo {
+export interface EntityInfo {
   apiId: string; // API identifier for the creating entity
   entityId: MongoId; // ID of the creating entity
   factoryId: MongoId; // Factory that produced the item
   brandId: MongoId; // Brand that owns the item
 }
 
-/** Product details structure shared between brand and factory */
-interface ProductDetails {
-  productId?: string;
-  productName?: string;
-  productType?: string;
+/** Base details structure for both brand and factory */
+export interface BaseDetails {
+  id?: string;
+  name?: string;
+  type?: string;
+  subType?: string;
 }
 
+/** Brand details extend base details */
+export interface BrandDetails extends BaseDetails { }
+
+/** Factory details extend base details */
+export interface FactoryDetails extends BaseDetails { }
+
 /** Current location structure with optional details */
-interface CurrentLocation {
-  id: MongoId;
-  name: string;
+export interface CurrentLocation {
+  id?: MongoId;
+  name?: string;
   details?: Record<string, unknown>; // Max 3 properties
 }
 
 /** Transit destination information */
-interface TransitTo {
+export interface TransitTo {
   id?: MongoId; // Must be a valid storage location
   client?: string; // External client reference
   // Note: Only one of id or client can be set
 }
 
 /** Color information */
-interface Color {
+export interface Color {
   id?: string;
   name: string; // Required for item creation
 }
 
 /** Deletion tracking */
-interface DeletionInfo {
+export interface DeletionInfo {
   status: boolean; // Defaults to false
   deletionDate?: Date; // Auto-set when status becomes true
 }
 
-/** Metadata for item classification */
-interface ItemMetadata {
-  types?: string[]; // 1-4 type identifiers
-  synthetizedType?: string;
-  productType?;
+/** Location history entry */
+export interface LocationHistoryEntry {
+  id: MongoId;
+  name: string;
+  date: Date;
 }
 
 /**
@@ -88,44 +99,33 @@ export interface USFItem {
   id?: string;
   hardcode?: string; // Optional hardcoded identifier
   sku?: string;
+
   // Core entity information - Required on creation, immutable after
-  entities: EntityInfo;
+  entities?: EntityInfo;
 
   // Location tracking
+  // Note: Runtime validation ensures either currentLocation OR transitTo is provided on creation
   currentLocation?: CurrentLocation;
   transitTo?: TransitTo;
-  locationHistory: LocationReference[];
+  locationHistory?: LocationHistoryEntry[];
 
   // Item details
-  color: Color;
-  packageQuantity: number; // Must be positive
+  color?: Color;
+  packageQuantity?: number; // Must be positive
 
   // Availability tracking
   availability?: AvailabilityMap;
 
   // Product information
-  brandDetails: {
-    productId?: string;
-    productName?: string;
-    productType?: string;
-  } & ProductDetails;
+  brandDetails?: BrandDetails;
+  factoryDetails?: FactoryDetails;
 
-  factoryDetails: {
-    productId: string; // Required
-    productName?: string;
-    productType: string; // Required
-  } & ProductDetails;
-
-  // Classification and tracking
-  metadata: ItemMetadata;
-  deleted: DeletionInfo;
+  // Deletion tracking
+  deleted?: DeletionInfo;
 
   // Timestamps
   createdAt?: Date;
   updatedAt?: Date;
-
-  // Virtual field
-  readonly productType?: string; // Computed from metadata.synthetizedType
 }
 
 export interface USFItemResponse
@@ -146,7 +146,7 @@ export interface USFItemResponse
   transitTo?: Omit<TransitTo, "id"> & {
     id?: ObjectIdString;
   };
-  locationHistory: Array<
+  locationHistory?: Array<
     Omit<LocationReference, "id"> & {
       id: ObjectIdString;
     }
@@ -155,24 +155,36 @@ export interface USFItemResponse
 
 /**
  * Create operation requirements
- * @description Stricter type for item creation
+ * @description Stricter type for item creation with required fields
+ * Note: The API enforces additional validations that TypeScript cannot express:
+ * - Either currentLocation OR transitTo must be provided, but not both
+ * - Entity IDs must be valid MongoDB ObjectIDs
  */
 export interface CreateUSFItem extends Omit<USFItem, "_id"> {
+  // Required fields for creation
   entities: Required<EntityInfo>;
   color: Required<Color>;
-  productType: string;
+  sku: string;
+  packageQuantity: number;
+
+  // Either currentLocation or transitTo is required (enforced at runtime)
+  // TypeScript cannot express "one of these two must be present"
+
+  // Required product details
+  brandDetails: BrandDetails;
+  factoryDetails: FactoryDetails;
 }
 
 /**
  * Update operation allowed fields
  * @description Excludes immutable fields and allows partial updates
+ * Note: The API prevents updating certain fields that cannot be expressed in TypeScript
  */
 export type UpdateUSFItem = Partial<
   Omit<
     USFItem,
     | "_id"
     | "entities"
-    | "metadata"
     | "locationHistory"
     | "createdAt"
     | "updatedAt"
@@ -183,6 +195,7 @@ export type UpdateUSFItem = Partial<
 export const isValidObjectId = (id: string): id is ObjectIdString => {
   return Types.ObjectId.isValid(id);
 };
+
 /**
  * Request shape when creating/updating items
  * Accepts both string (must be valid ObjectId) and ObjectId instances

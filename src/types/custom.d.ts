@@ -65,9 +65,26 @@ interface UpdateBatchRequestBody extends RequestBodyBase<BatchUpdateQuery[]> {
   query: BatchUpdateQuery[];
 }
 
+interface BulkWriteRequestBody extends RequestBodyBase<any> {
+  operation: "bulkWrite";
+  query: {
+    updateOne: BulkWriteUpdateOneOperation;
+  }[];
+}
+
 interface AggregateRequestBody extends RequestBodyBase<AggregateStages[]> {
   operation: "aggregate";
   query: AggregateStages[];
+}
+
+// Aggregate pipeline stage
+interface AggregateStageDto {
+  stage: AggregateStages;
+}
+
+// Aggregate pipeline
+interface AggregatePipelineDto {
+  pipeline: AggregateStageDto[];
 }
 
 type AllRequestBodies =
@@ -77,4 +94,5 @@ type AllRequestBodies =
   | DeleteRequestBody
   | CreateBatchRequestBody
   | UpdateBatchRequestBody
+  | BulkWriteRequestBody
   | AggregateRequestBody;

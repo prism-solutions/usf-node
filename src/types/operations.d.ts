@@ -1,5 +1,5 @@
 // MongoDB Operators and Query Types
-import type { USFItem, LocationReference } from "./item";
+import type { USFItem, LocationReference, CreateUSFItem, UpdateUSFItem } from "./item";
 
 /** MongoDB comparison operators */
 export interface MongoComparisonOperators<T> {
@@ -44,8 +44,8 @@ export type QueryableField<T> = T | MongoOperators<T>;
 /** Make all fields in an object queryable */
 export type QueryableObject<T> = {
   [P in keyof T]?: T[P] extends object
-    ? QueryableObject<T[P]> | QueryableField<T[P]>
-    : QueryableField<T[P]>;
+  ? QueryableObject<T[P]> | QueryableField<T[P]>
+  : QueryableField<T[P]>;
 } & MongoLogicalOperators<QueryableObject<T>>;
 
 /**
@@ -58,6 +58,22 @@ export interface FindQuery
     $search: string;
     $language?: string;
   };
+}
+
+/**
+ * Single Aggregate Stage
+ * Base interface for aggregate pipeline stages
+ */
+export interface AggregateStage {
+  stage: AggregateStages;
+}
+
+/**
+ * Aggregate Pipeline
+ * Contains a series of stages to be executed in order
+ */
+export interface AggregatePipeline {
+  pipeline: AggregateStage[];
 }
 
 /**
@@ -77,18 +93,22 @@ export interface AggregateStages {
   $limit?: number;
   $skip?: number;
   $unwind?:
-    | string
-    | {
-        path: string;
-        includeArrayIndex?: string;
-        preserveNullAndEmptyArrays?: boolean;
-      };
+  | string
+  | {
+    path: string;
+    includeArrayIndex?: string;
+    preserveNullAndEmptyArrays?: boolean;
+  };
   $lookup?: {
     from: string;
     localField: string;
     foreignField: string;
     as: string;
   };
+  $addFields?: {
+    [key: string]: any;
+  };
+  $count?: string;
 }
 
 /** Aggregate Expression Operations */
@@ -113,7 +133,7 @@ export interface Expression {
  */
 export interface UpdateQuery {
   $set?: Partial<
-    Omit<USFItem, "_id" | "entities" | "metadata" | "locationHistory">
+    Omit<USFItem, "_id" | "entities" | "locationHistory">
   >;
   $unset?: { [P in keyof USFItem]?: "" };
   $inc?: { packageQuantity?: number };
@@ -127,12 +147,14 @@ export interface UpdateQuery {
 
 /**
  * Options for find operations
+ * Note: includeDeleted is supported by the API but defaults to false
  */
 export interface FindOptions {
   sort?: { [key in keyof USFItem]?: 1 | -1 };
   limit?: number;
   skip?: number;
   select?: { [key in keyof USFItem]?: 0 | 1 };
+  includeDeleted?: boolean;
 }
 
 /**
@@ -171,6 +193,24 @@ export interface BatchUpdateQuery {
 }
 
 /**
+ * Bulk Write Update One Operation
+ * Matches the structure in bulkwrite.dto.ts
+ */
+export interface BulkWriteUpdateOneOperation {
+  filter: FindQuery;
+  update: UpdateQuery;
+}
+
+/**
+ * Bulk Write Operation
+ * Can be a single operation or array of operations
+ * The API accepts either format
+ */
+export type BulkWriteOperation =
+  | { updateOne: BulkWriteUpdateOneOperation }
+  | { updateOne: BulkWriteUpdateOneOperation }[];
+
+/**
  * Batch Operation Results
  * @description Results returned from batch operations
  */
@@ -195,8 +235,12 @@ export type {
   BatchOperationResult,
   FindOptions,
   AggregateStages,
+  AggregateStage,
+  AggregatePipeline,
   Expression,
   MongoOperators,
   QueryableField,
   QueryableObject,
+  BulkWriteUpdateOneOperation,
+  BulkWriteOperation,
 };
